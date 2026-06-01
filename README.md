@@ -44,16 +44,6 @@ Preview the mobile-first learning flow: create a practice, study one subtitle se
 - Saves practices, answers, replay counts, progress, and difficult markers in Supabase.
 - Public app with no login, signup, or authentication required.
 
-## Tech Stack
-
-- React
-- TypeScript
-- Vite
-- Supabase Database
-- YouTube IFrame Player API
-- Lucide React icons
-- CSS
-- Vercel
 
 ## Installation
 
