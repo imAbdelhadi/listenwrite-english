@@ -17,20 +17,21 @@ const supabaseUrl = import.meta.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey =
   import.meta.env.NEXT_PUBLIC_SUPABASE_ANON_KEY ?? import.meta.env.NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY;
 
-if (!supabaseUrl || !supabaseAnonKey) {
-  throw new Error("Missing Supabase environment variables.");
-}
+const isSupabaseConfigured = Boolean(supabaseUrl && supabaseAnonKey);
 
-export const db = createClient(supabaseUrl, supabaseAnonKey, {
-  auth: {
-    persistSession: false,
-    autoRefreshToken: false,
-    detectSessionInUrl: false,
-  },
-});
+export const db = isSupabaseConfigured
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      auth: {
+        persistSession: false,
+        autoRefreshToken: false,
+        detectSessionInUrl: false,
+      },
+    })
+  : null;
 
 export async function getPractices(): Promise<Practice[]> {
-  const { data, error } = await db
+  const client = getSupabaseClient();
+  const { data, error } = await client
     .from("practices")
     .select("*")
     .order("last_opened_at", { ascending: false });
@@ -40,14 +41,16 @@ export async function getPractices(): Promise<Practice[]> {
 }
 
 export async function getPractice(id: string): Promise<Practice | undefined> {
-  const { data, error } = await db.from("practices").select("*").eq("id", id).maybeSingle();
+  const client = getSupabaseClient();
+  const { data, error } = await client.from("practices").select("*").eq("id", id).maybeSingle();
 
   if (error) throw error;
   return data ? mapPracticeFromRow(data) : undefined;
 }
 
 export async function savePractice(practice: Practice): Promise<void> {
-  const { error } = await db.from("practices").upsert(mapPracticeToRow({
+  const client = getSupabaseClient();
+  const { error } = await client.from("practices").upsert(mapPracticeToRow({
     ...practice,
     updatedAt: new Date().toISOString(),
   }));
@@ -56,8 +59,17 @@ export async function savePractice(practice: Practice): Promise<void> {
 }
 
 export async function deletePractice(id: string): Promise<void> {
-  const { error } = await db.from("practices").delete().eq("id", id);
+  const client = getSupabaseClient();
+  const { error } = await client.from("practices").delete().eq("id", id);
   if (error) throw error;
+}
+
+function getSupabaseClient() {
+  if (!db) {
+    throw new Error("Missing Supabase environment variables.");
+  }
+
+  return db;
 }
 
 function mapPracticeFromRow(row: PracticeRow): Practice {

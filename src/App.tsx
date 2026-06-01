@@ -1,7 +1,6 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
-  Captions,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -48,8 +47,6 @@ type YouTubePlayer = {
   setPlaybackRate: (rate: number) => void;
   getCurrentTime: () => number;
   getDuration: () => number;
-  loadModule: (moduleName: string) => void;
-  unloadModule: (moduleName: string) => void;
   destroy: () => void;
 };
 
@@ -241,6 +238,13 @@ function HomeScreen({
           );
         })}
       </div>
+
+      <footer className="home-footer">
+        <span>Github repo: </span>
+        <a href="https://github.com/imAbdelhadi/listenwrite-english" target="_blank" rel="noreferrer">
+          imAbdelhadi/listenwrite-english
+        </a>
+      </footer>
     </section>
   );
 }
@@ -510,7 +514,6 @@ function YouTubeSegmentPlayer({
   const [isReady, setIsReady] = useState(false);
   const [playerError, setPlayerError] = useState("");
   const [activePlaybackRate, setActivePlaybackRate] = useState<number | null>(null);
-  const [showYouTubeCaptions, setShowYouTubeCaptions] = useState(false);
   const [currentVideoTime, setCurrentVideoTime] = useState(0);
   const [videoDuration, setVideoDuration] = useState(0);
 
@@ -557,9 +560,7 @@ function YouTubeSegmentPlayer({
         playerRef.current = new window.YT.Player(elementId, {
           videoId,
           playerVars: {
-            controls: 0,
-            disablekb: 1,
-            fs: 0,
+            controls: 1,
             iv_load_policy: 3,
             playsinline: 1,
             rel: 0,
@@ -623,16 +624,6 @@ function YouTubeSegmentPlayer({
     }
   }, [autoPlayRequest, isReady, playSegment]);
 
-  useEffect(() => {
-    if (!isReady) return;
-
-    if (showYouTubeCaptions) {
-      playerRef.current?.loadModule("captions");
-    } else {
-      playerRef.current?.unloadModule("captions");
-    }
-  }, [isReady, showYouTubeCaptions]);
-
   return (
     <section className="player-section">
       <div className="video-frame">
@@ -688,16 +679,6 @@ function YouTubeSegmentPlayer({
         >
           <Gauge size={20} />
           0.75x
-        </button>
-        <button
-          className={showYouTubeCaptions ? "active-captions" : ""}
-          onClick={() => setShowYouTubeCaptions((value) => !value)}
-          disabled={!isReady}
-          aria-label={showYouTubeCaptions ? "Hide YouTube subtitles" : "Show YouTube subtitles"}
-          title={showYouTubeCaptions ? "Hide YouTube subtitles" : "Show YouTube subtitles"}
-        >
-          <Captions size={20} />
-          CC
         </button>
         <button
           onClick={() => {

@@ -202,6 +202,25 @@ button:disabled {
   background: #36a979;
 }
 
+.home-footer {
+  margin-top: 28px;
+  padding: 18px 0 4px;
+  color: #617068;
+  font-size: 0.9rem;
+  font-weight: 700;
+  text-align: center;
+}
+
+.home-footer a {
+  color: #226f54;
+  font-weight: 800;
+  text-decoration: none;
+}
+
+.home-footer a:hover {
+  text-decoration: underline;
+}
+
 .form-stack {
   display: grid;
   gap: 16px;
@@ -308,10 +327,6 @@ input {
   height: 100%;
 }
 
-.video-frame iframe {
-  pointer-events: none;
-}
-
 .video-scrubber {
   display: grid;
   grid-template-columns: 46px 1fr 46px;
@@ -339,7 +354,7 @@ input {
 
 .control-row {
   display: grid;
-  grid-template-columns: 1fr 1.25fr 1fr 0.85fr 46px;
+  grid-template-columns: 1fr 1.25fr 1fr 46px;
   gap: 8px;
 }
 
@@ -358,12 +373,6 @@ input {
 .control-row button.active-speed {
   color: #ffffff;
   background: #2f6fbd;
-  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.42);
-}
-
-.control-row button.active-captions {
-  color: #ffffff;
-  background: #5a4bb7;
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.42);
 }
 
