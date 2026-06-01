@@ -6,6 +6,8 @@
 
 It is built for learners who want a simple language learning tool for daily listening practice, dictation, writing accuracy, vocabulary building, sentence structure, and active recall without using complicated subtitle editors.
 
+Read the full article on Medium: [Learn Languages from YouTube Through Listening and Writing Practice Using Subtitles](https://abdelhadi.medium.com/learn-languages-from-youtube-through-listening-and-writing-practice-using-subtitles-12ab38baa3b8)
+
 Keywords: **Learn English from YouTube**, **English listening practice**, **English dictation app**, **translated subtitles**, **Language learning tool**, **YouTube language learning**, **English writing practice**, **English listening trainer**.
 
 ## Project Overview
