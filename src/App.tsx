@@ -4,11 +4,12 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
+  Eye,
+  EyeOff,
   FileText,
   Flag,
   Gauge,
   List,
-  Pause,
   Play,
   Plus,
   RefreshCcw,
@@ -16,7 +17,7 @@ import {
   Upload,
 } from "lucide-react";
 import { deletePractice, getPractice, getPractices, savePractice } from "./db";
-import { parseSubtitleFile } from "./subtitles";
+import { parseSubtitleCues, parseSubtitleFile, type SubtitleCue } from "./subtitles";
 import type { Practice, Segment } from "./types";
 import { extractYouTubeVideoId } from "./youtube";
 
@@ -258,12 +259,18 @@ function NewPracticeScreen({
 }) {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
+  const [originalFile, setOriginalFile] = useState<File | null>(null);
   const [error, setError] = useState("");
   const [isCreating, setIsCreating] = useState(false);
 
   const handleFileChange = (event: ChangeEvent<HTMLInputElement>) => {
     setError("");
     setFile(event.target.files?.[0] ?? null);
+  };
+
+  const handleOriginalFileChange = (event: ChangeEvent<HTMLInputElement>) => {
+    setError("");
+    setOriginalFile(event.target.files?.[0] ?? null);
   };
 
   const createPractice = async () => {
@@ -280,8 +287,13 @@ function NewPracticeScreen({
       return;
     }
 
-    if (!/\.(srt|vtt)$/i.test(file.name)) {
+    if (!isSubtitleFile(file)) {
       setError("Please upload an SRT or VTT file.");
+      return;
+    }
+
+    if (originalFile && !isSubtitleFile(originalFile)) {
+      setError("Please upload an SRT or VTT file for the original subtitle.");
       return;
     }
 
@@ -293,6 +305,18 @@ function NewPracticeScreen({
       if (segments.length === 0) {
         setError("No subtitle segments were found.");
         return;
+      }
+
+      if (originalFile) {
+        const originalCues = parseSubtitleCues(await originalFile.text());
+        if (originalCues.length === 0) {
+          setError("The original subtitle file is not valid. Please upload a valid SRT or VTT file.");
+          return;
+        }
+
+        segments.forEach((segment) => {
+          segment.originalText = findMatchingCueText(segment.startTime, segment.endTime, originalCues);
+        });
       }
 
       const now = new Date().toISOString();
@@ -335,11 +359,20 @@ function NewPracticeScreen({
         </label>
 
         <label className="file-picker">
-          <span>Upload Arabic Subtitle</span>
+          <span>Upload Translated Subtitle</span>
           <input accept=".srt,.vtt,text/vtt" type="file" onChange={handleFileChange} />
           <div>
             <Upload size={18} />
             {file ? file.name : "Choose SRT or VTT file"}
+          </div>
+        </label>
+
+        <label className="file-picker optional">
+          <span>Upload Original Subtitle <small>Optional</small></span>
+          <input accept=".srt,.vtt,text/vtt" type="file" onChange={handleOriginalFileChange} />
+          <div>
+            <Upload size={18} />
+            {originalFile ? originalFile.name : "Choose original SRT or VTT file"}
           </div>
         </label>
 
@@ -368,6 +401,8 @@ function PracticeScreen({
   const percent = getProgressPercent(practice.segments);
   const [showSegments, setShowSegments] = useState(false);
   const [autoPlayRequest, setAutoPlayRequest] = useState(0);
+  const [showOriginalSubtitle, setShowOriginalSubtitle] = useState(false);
+  const hasOriginalSubtitles = practice.segments.some((segment) => Boolean(segment.originalText));
 
   const updateCurrentSegment = (updater: (segment: Segment) => Segment) => {
     const segments = practice.segments.map((segment, index) =>
@@ -429,6 +464,9 @@ function PracticeScreen({
         videoId={practice.youtubeVideoId}
         segment={currentSegment}
         autoPlayRequest={autoPlayRequest}
+        hasOriginalSubtitle={hasOriginalSubtitles}
+        showOriginalSubtitle={showOriginalSubtitle}
+        onToggleOriginalSubtitle={() => setShowOriginalSubtitle((value) => !value)}
         onVideoTimeChange={syncSegmentToVideoTime}
         onReplay={() => {
           updateCurrentSegment((segment) => ({ ...segment, replayCount: segment.replayCount + 1 }));
@@ -443,6 +481,12 @@ function PracticeScreen({
       <section className="subtitle-band" dir="rtl">
         {currentSegment.arabicText}
       </section>
+
+      {showOriginalSubtitle && currentSegment.originalText && (
+        <section className="original-subtitle-band">
+          {currentSegment.originalText}
+        </section>
+      )}
 
       <label className="answer-box">
         <span>Write the English sentence you hear</span>
@@ -497,12 +541,18 @@ function YouTubeSegmentPlayer({
   videoId,
   segment,
   autoPlayRequest,
+  hasOriginalSubtitle,
+  showOriginalSubtitle,
+  onToggleOriginalSubtitle,
   onVideoTimeChange,
   onReplay,
 }: {
   videoId: string;
   segment: Segment;
   autoPlayRequest: number;
+  hasOriginalSubtitle: boolean;
+  showOriginalSubtitle: boolean;
+  onToggleOriginalSubtitle: () => void;
   onVideoTimeChange: (time: number) => void;
   onReplay: () => void;
 }) {
@@ -649,7 +699,7 @@ function YouTubeSegmentPlayer({
         />
         <span>{videoDuration > 0 ? formatTimestamp(videoDuration) : "--:--"}</span>
       </div>
-      <div className="control-row">
+      <div className={hasOriginalSubtitle ? "control-row has-original" : "control-row"}>
         <button
           className={activePlaybackRate === 1 ? "active-speed" : ""}
           onClick={() => playSegment(1)}
@@ -680,19 +730,16 @@ function YouTubeSegmentPlayer({
           <Gauge size={20} />
           0.75x
         </button>
-        <button
-          onClick={() => {
-            playerRef.current?.pauseVideo();
-            stopEndTimer();
-            stopSyncTimer();
-            setActivePlaybackRate(null);
-          }}
-          disabled={!isReady}
-          aria-label="Pause"
-          title="Pause"
-        >
-          <Pause size={20} />
-        </button>
+        {hasOriginalSubtitle && (
+          <button
+            className={showOriginalSubtitle ? "active-original" : ""}
+            onClick={onToggleOriginalSubtitle}
+            title={showOriginalSubtitle ? "Hide original subtitle" : "Show original subtitle"}
+          >
+            {showOriginalSubtitle ? <EyeOff size={19} /> : <Eye size={19} />}
+            Original
+          </button>
+        )}
       </div>
     </section>
   );
@@ -766,6 +813,34 @@ function loadYouTubeApi(): Promise<void> {
       document.body.appendChild(script);
     }
   });
+}
+
+function isSubtitleFile(file: File): boolean {
+  return /\.(srt|vtt)$/i.test(file.name);
+}
+
+function findMatchingCueText(startTime: number, endTime: number, cues: SubtitleCue[]): string {
+  const midpoint = (startTime + endTime) / 2;
+  const overlappingCue = cues.find((cue) => {
+    const overlapStart = Math.max(startTime, cue.startTime);
+    const overlapEnd = Math.min(endTime, cue.endTime);
+    return overlapEnd - overlapStart > 0.05 || (midpoint >= cue.startTime && midpoint <= cue.endTime);
+  });
+
+  if (overlappingCue) {
+    return overlappingCue.text;
+  }
+
+  const nearestCue = cues.reduce<SubtitleCue | null>((nearest, cue) => {
+    if (!nearest) return cue;
+    const cueDistance = Math.abs((cue.startTime + cue.endTime) / 2 - midpoint);
+    const nearestDistance = Math.abs((nearest.startTime + nearest.endTime) / 2 - midpoint);
+    return cueDistance < nearestDistance ? cue : nearest;
+  }, null);
+
+  if (!nearestCue) return "";
+  const nearestDistance = Math.abs((nearestCue.startTime + nearestCue.endTime) / 2 - midpoint);
+  return nearestDistance <= 2 ? nearestCue.text : "";
 }
 
 function getCompletedCount(segments: Segment[]): number {

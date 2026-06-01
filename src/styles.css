@@ -273,6 +273,13 @@ input {
   overflow-wrap: anywhere;
 }
 
+.file-picker small {
+  margin-inline-start: 6px;
+  color: #617068;
+  font-size: 0.76rem;
+  font-weight: 800;
+}
+
 .error-message {
   margin: 0;
   padding: 12px;
@@ -354,8 +361,12 @@ input {
 
 .control-row {
   display: grid;
-  grid-template-columns: 1fr 1.25fr 1fr 46px;
+  grid-template-columns: 1fr 1.25fr 1fr;
   gap: 8px;
+}
+
+.control-row.has-original {
+  grid-template-columns: 1fr 1.15fr 1fr 1fr;
 }
 
 .control-row button {
@@ -376,6 +387,12 @@ input {
   box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.42);
 }
 
+.control-row button.active-original {
+  color: #ffffff;
+  background: #2f6fbd;
+  box-shadow: inset 0 0 0 2px rgba(255, 255, 255, 0.42);
+}
+
 .subtitle-band {
   margin: 14px 0;
   padding: 16px;
@@ -385,6 +402,18 @@ input {
   color: #15221a;
   font-size: 1.18rem;
   line-height: 1.7;
+}
+
+.original-subtitle-band {
+  margin: 0 0 14px;
+  padding: 14px 16px;
+  border-inline-start: 4px solid #2f6fbd;
+  border-radius: 8px;
+  background: #eef4ff;
+  color: #17211b;
+  font-size: 1rem;
+  font-weight: 750;
+  line-height: 1.55;
 }
 
 .answer-box textarea {

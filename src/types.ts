@@ -4,6 +4,7 @@ export type Segment = {
   startTime: number;
   endTime: number;
   arabicText: string;
+  originalText?: string;
   userAnswer: string;
   replayCount: number;
   isCompleted: boolean;

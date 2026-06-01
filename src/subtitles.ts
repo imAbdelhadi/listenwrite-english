@@ -1,12 +1,18 @@
 import type { Segment } from "./types";
 
+export type SubtitleCue = {
+  startTime: number;
+  endTime: number;
+  text: string;
+};
+
 const cueTimePattern =
   /(?<start>\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}|\d{1,2}:\d{2}[,.]\d{1,3})\s*-->\s*(?<end>\d{1,2}:\d{2}:\d{2}[,.]\d{1,3}|\d{1,2}:\d{2}[,.]\d{1,3})/;
 
-export function parseSubtitleFile(content: string): Segment[] {
+export function parseSubtitleCues(content: string): SubtitleCue[] {
   const normalized = content.replace(/\r/g, "").replace(/^\uFEFF/, "");
   const lines = normalized.split("\n");
-  const segments: Segment[] = [];
+  const cues: SubtitleCue[] = [];
 
   let index = 0;
   while (index < lines.length) {
@@ -31,26 +37,29 @@ export function parseSubtitleFile(content: string): Segment[] {
       index += 1;
     }
 
-    const arabicText = textLines.join(" ").replace(/\s+/g, " ").trim();
-    if (Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime && arabicText) {
-      const segmentIndex = segments.length;
-      segments.push({
-        id: `segment_${segmentIndex + 1}`,
-        index: segmentIndex,
-        startTime,
-        endTime,
-        arabicText,
-        userAnswer: "",
-        replayCount: 0,
-        isCompleted: false,
-        isDifficult: false,
-      });
+    const text = textLines.join(" ").replace(/\s+/g, " ").trim();
+    if (Number.isFinite(startTime) && Number.isFinite(endTime) && endTime > startTime && text) {
+      cues.push({ startTime, endTime, text });
     }
 
     index += 1;
   }
 
-  return segments;
+  return cues;
+}
+
+export function parseSubtitleFile(content: string): Segment[] {
+  return parseSubtitleCues(content).map((cue, index) => ({
+    id: `segment_${index + 1}`,
+    index,
+    startTime: cue.startTime,
+    endTime: cue.endTime,
+    arabicText: cue.text,
+    userAnswer: "",
+    replayCount: 0,
+    isCompleted: false,
+    isDifficult: false,
+  }));
 }
 
 export function parseTimeToSeconds(value: string): number {
