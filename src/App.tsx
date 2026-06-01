@@ -1,6 +1,7 @@
 import { ChangeEvent, useCallback, useEffect, useMemo, useRef, useState } from "react";
 import {
   ArrowLeft,
+  Captions,
   Check,
   ChevronLeft,
   ChevronRight,
@@ -27,10 +28,11 @@ declare global {
         elementId: string,
         options: {
           videoId: string;
-          playerVars?: Record<string, number | string>;
+        playerVars?: Record<string, number | string>;
           events?: {
             onReady?: () => void;
             onError?: () => void;
+            onStateChange?: (event: { data: number }) => void;
           };
         },
       ) => YouTubePlayer;
@@ -45,8 +47,17 @@ type YouTubePlayer = {
   pauseVideo: () => void;
   setPlaybackRate: (rate: number) => void;
   getCurrentTime: () => number;
+  getDuration: () => number;
+  loadModule: (moduleName: string) => void;
+  unloadModule: (moduleName: string) => void;
   destroy: () => void;
 };
+
+const youtubePlayerState = {
+  playing: 1,
+  paused: 2,
+  buffering: 3,
+} as const;
 
 type Screen =
   | { name: "home" }
@@ -60,11 +71,18 @@ export function App() {
   const [practices, setPractices] = useState<Practice[]>([]);
   const [activePractice, setActivePractice] = useState<Practice | null>(null);
   const [isLoading, setIsLoading] = useState(true);
+  const [appError, setAppError] = useState("");
 
   const loadPractices = useCallback(async () => {
-    const saved = await getPractices();
-    setPractices(saved);
-    setIsLoading(false);
+    try {
+      setAppError("");
+      const saved = await getPractices();
+      setPractices(saved);
+    } catch {
+      setAppError("Database is not ready. Please run the Supabase schema SQL and check the public policies.");
+    } finally {
+      setIsLoading(false);
+    }
   }, []);
 
   useEffect(() => {
@@ -78,13 +96,15 @@ export function App() {
     }
 
     let isMounted = true;
-    void getPractice(screen.practiceId).then(async (practice) => {
-      if (!practice || !isMounted) return;
-      const openedPractice = { ...practice, lastOpenedAt: new Date().toISOString() };
-      setActivePractice(openedPractice);
-      await savePractice(openedPractice);
-      await loadPractices();
-    });
+    void getPractice(screen.practiceId)
+      .then(async (practice) => {
+        if (!practice || !isMounted) return;
+        const openedPractice = { ...practice, lastOpenedAt: new Date().toISOString() };
+        setActivePractice(openedPractice);
+        await savePractice(openedPractice);
+        await loadPractices();
+      })
+      .catch(() => setAppError("Database is not ready. Please run the Supabase schema SQL and check the public policies."));
 
     return () => {
       isMounted = false;
@@ -98,8 +118,12 @@ export function App() {
 
   const handlePracticeChange = async (nextPractice: Practice) => {
     setActivePractice(nextPractice);
-    await savePractice(nextPractice);
-    await loadPractices();
+    try {
+      await savePractice(nextPractice);
+      await loadPractices();
+    } catch {
+      setAppError("Could not save progress. Please check the Supabase table policies.");
+    }
   };
 
   return (
@@ -108,11 +132,16 @@ export function App() {
         <HomeScreen
           isLoading={isLoading}
           practices={practices}
+          error={appError}
           onNew={() => setScreen({ name: "new" })}
           onOpen={(practiceId) => setScreen({ name: "practice", practiceId })}
           onDelete={async (practiceId) => {
-            await deletePractice(practiceId);
-            await loadPractices();
+            try {
+              await deletePractice(practiceId);
+              await loadPractices();
+            } catch {
+              setAppError("Could not delete the practice. Please check the Supabase table policies.");
+            }
           }}
         />
       )}
@@ -121,9 +150,14 @@ export function App() {
         <NewPracticeScreen
           onBack={openHome}
           onCreated={async (practice) => {
-            await savePractice(practice);
-            await loadPractices();
-            setScreen({ name: "practice", practiceId: practice.id });
+            try {
+              await savePractice(practice);
+              await loadPractices();
+              setScreen({ name: "practice", practiceId: practice.id });
+            } catch {
+              setAppError("Could not save the practice. Please check the Supabase table policies.");
+              setScreen({ name: "home" });
+            }
           }}
         />
       )}
@@ -141,12 +175,14 @@ function HomeScreen({
   onNew,
   onOpen,
   onDelete,
+  error,
 }: {
   isLoading: boolean;
   practices: Practice[];
   onNew: () => void;
   onOpen: (practiceId: string) => void;
   onDelete: (practiceId: string) => void;
+  error: string;
 }) {
   return (
     <section className="screen home-screen">
@@ -167,6 +203,7 @@ function HomeScreen({
 
       <div className="practice-list">
         <h2>Saved Practices</h2>
+        {error && <p className="error-message">{error}</p>}
         {isLoading && <p className="muted">Loading...</p>}
         {!isLoading && practices.length === 0 && (
           <div className="empty-state">
@@ -213,7 +250,7 @@ function NewPracticeScreen({
   onCreated,
 }: {
   onBack: () => void;
-  onCreated: (practice: Practice) => void;
+  onCreated: (practice: Practice) => Promise<void>;
 }) {
   const [youtubeUrl, setYoutubeUrl] = useState("");
   const [file, setFile] = useState<File | null>(null);
@@ -255,7 +292,7 @@ function NewPracticeScreen({
       }
 
       const now = new Date().toISOString();
-      onCreated({
+      await onCreated({
         id: `practice_${crypto.randomUUID()}`,
         title: file.name.replace(/\.(srt|vtt)$/i, "") || "YouTube Practice",
         youtubeUrl,
@@ -326,6 +363,7 @@ function PracticeScreen({
   const completed = getCompletedCount(practice.segments);
   const percent = getProgressPercent(practice.segments);
   const [showSegments, setShowSegments] = useState(false);
+  const [autoPlayRequest, setAutoPlayRequest] = useState(0);
 
   const updateCurrentSegment = (updater: (segment: Segment) => Segment) => {
     const segments = practice.segments.map((segment, index) =>
@@ -334,7 +372,7 @@ function PracticeScreen({
     onChange({ ...practice, segments });
   };
 
-  const moveTo = (index: number) => {
+  const moveTo = (index: number, shouldAutoPlay = false) => {
     if (index < 0 || index >= practice.segments.length) return;
     const segments = practice.segments.map((segment, segmentIndex) =>
       segmentIndex === practice.currentSegmentIndex && segment.userAnswer.trim()
@@ -342,7 +380,26 @@ function PracticeScreen({
         : segment,
     );
     onChange({ ...practice, currentSegmentIndex: index, segments });
+    if (shouldAutoPlay) {
+      setAutoPlayRequest((value) => value + 1);
+    }
   };
+
+  const syncSegmentToVideoTime = useCallback(
+    (time: number) => {
+      const current = practice.segments[practice.currentSegmentIndex];
+      if (time >= current.startTime && time < current.endTime) return;
+
+      const matchingIndex = practice.segments.findIndex(
+        (segment) => time >= segment.startTime && time < segment.endTime,
+      );
+
+      if (matchingIndex >= 0 && matchingIndex !== practice.currentSegmentIndex) {
+        onChange({ ...practice, currentSegmentIndex: matchingIndex });
+      }
+    },
+    [onChange, practice],
+  );
 
   return (
     <section className="screen practice-screen">
@@ -364,9 +421,15 @@ function PracticeScreen({
         </button>
       </header>
 
-      <YouTubeSegmentPlayer videoId={practice.youtubeVideoId} segment={currentSegment} onReplay={() => {
-        updateCurrentSegment((segment) => ({ ...segment, replayCount: segment.replayCount + 1 }));
-      }} />
+      <YouTubeSegmentPlayer
+        videoId={practice.youtubeVideoId}
+        segment={currentSegment}
+        autoPlayRequest={autoPlayRequest}
+        onVideoTimeChange={syncSegmentToVideoTime}
+        onReplay={() => {
+          updateCurrentSegment((segment) => ({ ...segment, replayCount: segment.replayCount + 1 }));
+        }}
+      />
 
       <div className="progress-summary">
         <span>{completed} completed</span>
@@ -391,31 +454,33 @@ function PracticeScreen({
         />
       </label>
 
-      <div className="nav-grid">
-        <button onClick={() => moveTo(practice.currentSegmentIndex - 1)} disabled={practice.currentSegmentIndex === 0}>
-          <ChevronLeft size={20} />
-          Previous
-        </button>
-        <button onClick={() => moveTo(practice.currentSegmentIndex + 1)} disabled={practice.currentSegmentIndex === practice.segments.length - 1}>
-          Next
-          <ChevronRight size={20} />
+      <div className="practice-actions">
+        <div className="nav-grid">
+          <button onClick={() => moveTo(practice.currentSegmentIndex - 1, true)} disabled={practice.currentSegmentIndex === 0}>
+            <ChevronLeft size={20} />
+            Previous
+          </button>
+          <button onClick={() => moveTo(practice.currentSegmentIndex + 1, true)} disabled={practice.currentSegmentIndex === practice.segments.length - 1}>
+            Next
+            <ChevronRight size={20} />
+          </button>
+        </div>
+
+        <button
+          className={currentSegment.isDifficult ? "wide-action warning active" : "wide-action warning"}
+          onClick={() => updateCurrentSegment((segment) => ({ ...segment, isDifficult: !segment.isDifficult }))}
+        >
+          <Flag size={19} />
+          {currentSegment.isDifficult ? "Marked Difficult" : "Mark as Difficult"}
         </button>
       </div>
-
-      <button
-        className={currentSegment.isDifficult ? "wide-action warning active" : "wide-action warning"}
-        onClick={() => updateCurrentSegment((segment) => ({ ...segment, isDifficult: !segment.isDifficult }))}
-      >
-        <Flag size={19} />
-        {currentSegment.isDifficult ? "Marked Difficult" : "Mark as Difficult"}
-      </button>
 
       {showSegments && (
         <SegmentDrawer
           practice={practice}
           onClose={() => setShowSegments(false)}
           onSelect={(index) => {
-            moveTo(index);
+            moveTo(index, true);
             setShowSegments(false);
           }}
         />
@@ -427,17 +492,61 @@ function PracticeScreen({
 function YouTubeSegmentPlayer({
   videoId,
   segment,
+  autoPlayRequest,
+  onVideoTimeChange,
   onReplay,
 }: {
   videoId: string;
   segment: Segment;
+  autoPlayRequest: number;
+  onVideoTimeChange: (time: number) => void;
   onReplay: () => void;
 }) {
   const playerRef = useRef<YouTubePlayer | null>(null);
   const timerRef = useRef<number | null>(null);
+  const syncTimerRef = useRef<number | null>(null);
+  const onVideoTimeChangeRef = useRef(onVideoTimeChange);
   const elementId = useMemo(() => `youtube-player-${videoId}`, [videoId]);
   const [isReady, setIsReady] = useState(false);
   const [playerError, setPlayerError] = useState("");
+  const [activePlaybackRate, setActivePlaybackRate] = useState<number | null>(null);
+  const [showYouTubeCaptions, setShowYouTubeCaptions] = useState(false);
+  const [currentVideoTime, setCurrentVideoTime] = useState(0);
+  const [videoDuration, setVideoDuration] = useState(0);
+
+  useEffect(() => {
+    onVideoTimeChangeRef.current = onVideoTimeChange;
+  }, [onVideoTimeChange]);
+
+  const stopEndTimer = useCallback(() => {
+    if (timerRef.current) {
+      window.clearInterval(timerRef.current);
+      timerRef.current = null;
+    }
+  }, []);
+
+  const stopSyncTimer = useCallback(() => {
+    if (syncTimerRef.current) {
+      window.clearInterval(syncTimerRef.current);
+      syncTimerRef.current = null;
+    }
+  }, []);
+
+  const startSyncTimer = useCallback(() => {
+    stopSyncTimer();
+    syncTimerRef.current = window.setInterval(() => {
+      const currentTime = playerRef.current?.getCurrentTime();
+      if (typeof currentTime === "number") {
+        setCurrentVideoTime(currentTime);
+        onVideoTimeChangeRef.current(currentTime);
+      }
+
+      const duration = playerRef.current?.getDuration();
+      if (typeof duration === "number" && Number.isFinite(duration) && duration > 0) {
+        setVideoDuration(duration);
+      }
+    }, 350);
+  }, [stopSyncTimer]);
 
   useEffect(() => {
     let isMounted = true;
@@ -448,13 +557,32 @@ function YouTubeSegmentPlayer({
         playerRef.current = new window.YT.Player(elementId, {
           videoId,
           playerVars: {
+            controls: 0,
+            disablekb: 1,
+            fs: 0,
+            iv_load_policy: 3,
             playsinline: 1,
             rel: 0,
             modestbranding: 1,
           },
           events: {
-            onReady: () => setIsReady(true),
+            onReady: () => {
+              setIsReady(true);
+              const duration = playerRef.current?.getDuration();
+              if (typeof duration === "number" && Number.isFinite(duration)) {
+                setVideoDuration(duration);
+              }
+            },
             onError: () => setPlayerError("The YouTube video cannot be loaded. Please check the link."),
+            onStateChange: (event) => {
+              if (event.data === youtubePlayerState.playing || event.data === youtubePlayerState.buffering) {
+                startSyncTimer();
+              }
+
+              if (event.data === youtubePlayerState.paused) {
+                stopSyncTimer();
+              }
+            },
           },
         });
       })
@@ -463,19 +591,13 @@ function YouTubeSegmentPlayer({
     return () => {
       isMounted = false;
       stopEndTimer();
+      stopSyncTimer();
       playerRef.current?.destroy();
       playerRef.current = null;
     };
-  }, [elementId, videoId]);
+  }, [elementId, startSyncTimer, stopEndTimer, stopSyncTimer, videoId]);
 
-  const stopEndTimer = () => {
-    if (timerRef.current) {
-      window.clearInterval(timerRef.current);
-      timerRef.current = null;
-    }
-  };
-
-  const playSegment = (rate: number) => {
+  const playSegment = useCallback((rate: number) => {
     const player = playerRef.current;
     if (!player) return;
     stopEndTimer();
@@ -486,10 +608,30 @@ function YouTubeSegmentPlayer({
       const currentTime = player.getCurrentTime();
       if (currentTime >= segment.endTime || currentTime < segment.startTime - 0.5) {
         player.pauseVideo();
+        setActivePlaybackRate(null);
         stopEndTimer();
+        stopSyncTimer();
       }
     }, 80);
-  };
+    setActivePlaybackRate(rate);
+    startSyncTimer();
+  }, [segment.endTime, segment.startTime, startSyncTimer, stopEndTimer, stopSyncTimer]);
+
+  useEffect(() => {
+    if (isReady && autoPlayRequest > 0) {
+      playSegment(1);
+    }
+  }, [autoPlayRequest, isReady, playSegment]);
+
+  useEffect(() => {
+    if (!isReady) return;
+
+    if (showYouTubeCaptions) {
+      playerRef.current?.loadModule("captions");
+    } else {
+      playerRef.current?.unloadModule("captions");
+    }
+  }, [isReady, showYouTubeCaptions]);
 
   return (
     <section className="player-section">
@@ -497,8 +639,32 @@ function YouTubeSegmentPlayer({
         <div id={elementId} />
       </div>
       {playerError && <p className="error-message">{playerError}</p>}
+      <div className="video-scrubber">
+        <span>{formatTimestamp(currentVideoTime)}</span>
+        <input
+          type="range"
+          min="0"
+          max={Math.max(videoDuration, 1)}
+          step="0.1"
+          value={Math.min(currentVideoTime, Math.max(videoDuration, 1))}
+          disabled={!isReady || videoDuration <= 0}
+          aria-label="Video timeline"
+          onChange={(event) => {
+            const nextTime = Number(event.target.value);
+            setCurrentVideoTime(nextTime);
+            playerRef.current?.seekTo(nextTime, true);
+            onVideoTimeChange(nextTime);
+          }}
+        />
+        <span>{videoDuration > 0 ? formatTimestamp(videoDuration) : "--:--"}</span>
+      </div>
       <div className="control-row">
-        <button onClick={() => playSegment(1)} disabled={!isReady} title="Play">
+        <button
+          className={activePlaybackRate === 1 ? "active-speed" : ""}
+          onClick={() => playSegment(1)}
+          disabled={!isReady}
+          title="Play"
+        >
           <Play size={20} />
           Play
         </button>
@@ -514,14 +680,31 @@ function YouTubeSegmentPlayer({
           <RefreshCcw size={21} />
           Replay
         </button>
-        <button onClick={() => playSegment(slowRate)} disabled={!isReady} title="Play Slow">
+        <button
+          className={activePlaybackRate === slowRate ? "active-speed" : ""}
+          onClick={() => playSegment(slowRate)}
+          disabled={!isReady}
+          title="Play Slow"
+        >
           <Gauge size={20} />
-          Slow
+          0.75x
+        </button>
+        <button
+          className={showYouTubeCaptions ? "active-captions" : ""}
+          onClick={() => setShowYouTubeCaptions((value) => !value)}
+          disabled={!isReady}
+          aria-label={showYouTubeCaptions ? "Hide YouTube subtitles" : "Show YouTube subtitles"}
+          title={showYouTubeCaptions ? "Hide YouTube subtitles" : "Show YouTube subtitles"}
+        >
+          <Captions size={20} />
+          CC
         </button>
         <button
           onClick={() => {
             playerRef.current?.pauseVideo();
             stopEndTimer();
+            stopSyncTimer();
+            setActivePlaybackRate(null);
           }}
           disabled={!isReady}
           aria-label="Pause"
@@ -543,6 +726,12 @@ function SegmentDrawer({
   onClose: () => void;
   onSelect: (index: number) => void;
 }) {
+  const activeRowRef = useRef<HTMLButtonElement | null>(null);
+
+  useEffect(() => {
+    activeRowRef.current?.scrollIntoView({ block: "center" });
+  }, []);
+
   return (
     <div className="drawer-backdrop" onClick={onClose}>
       <aside className="segment-drawer" onClick={(event) => event.stopPropagation()}>
@@ -556,7 +745,14 @@ function SegmentDrawer({
           {practice.segments.map((segment) => (
             <button
               key={segment.id}
-              className={segment.index === practice.currentSegmentIndex ? "segment-row active" : "segment-row"}
+              ref={segment.index === practice.currentSegmentIndex ? activeRowRef : undefined}
+              className={[
+                "segment-row",
+                segment.isCompleted || segment.userAnswer.trim() ? "completed" : "",
+                segment.index === practice.currentSegmentIndex ? "active" : "",
+              ]
+                .filter(Boolean)
+                .join(" ")}
               onClick={() => onSelect(segment.index)}
             >
               <span>{segment.index + 1}</span>

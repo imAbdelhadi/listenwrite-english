@@ -1,12 +1,30 @@
 {
+  "name": "listenwrite-english",
+  "version": "1.0.0",
+  "description": "A mobile-first English listening and dictation trainer that turns YouTube videos with Arabic subtitles into sentence-by-sentence practice.",
+  "private": false,
+  "license": "MIT",
+  "keywords": [
+    "learn english from youtube",
+    "english listening practice",
+    "english dictation app",
+    "arabic subtitles",
+    "language learning tool",
+    "youtube language learning",
+    "english writing practice",
+    "english listening trainer",
+    "react",
+    "supabase",
+    "vite"
+  ],
   "scripts": {
     "dev": "vite --host 0.0.0.0",
     "build": "tsc -b && vite build",
     "preview": "vite preview --host 0.0.0.0"
   },
   "dependencies": {
+    "@supabase/supabase-js": "^2.106.2",
     "@vitejs/plugin-react": "latest",
-    "dexie": "latest",
     "lucide-react": "latest",
     "react": "latest",
     "react-dom": "latest",

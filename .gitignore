@@ -3,3 +3,8 @@ dist/
 *.tsbuildinfo
 vite.config.js
 vite.config.d.ts
+.env.local
+.env.*.local
+.vercel/
+.env*
+!.env.example
