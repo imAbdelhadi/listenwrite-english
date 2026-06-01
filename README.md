@@ -1,26 +1,26 @@
 # ListenWrite English
 
-**Learn English listening and writing from YouTube in an easy, focused way.**
+**Turn YouTube from passive watching into active listening and writing practice.**
 
-**ListenWrite English** is a mobile-first English listening trainer and dictation app for Arabic speakers. Paste a YouTube link, upload Arabic subtitles, then practice sentence by sentence: listen to the English audio, read the Arabic meaning, and write what you hear.
+**ListenWrite English** is a mobile-friendly language learning app that helps learners improve listening and writing skills with YouTube videos and translated subtitles. Paste a YouTube link, upload subtitle translations, then practice sentence by sentence: listen to the audio, read the meaning, and write what you hear.
 
-It is built for learners who want a simple language learning tool for daily English listening practice, English writing practice, vocabulary building, sentence structure, and active recall without using complicated subtitle editors.
+It is built for learners who want a simple language learning tool for daily listening practice, dictation, writing accuracy, vocabulary building, sentence structure, and active recall without using complicated subtitle editors.
 
-Keywords: **Learn English from YouTube**, **English listening practice**, **English dictation app**, **Arabic subtitles**, **Language learning tool**, **YouTube language learning**, **English writing practice**, **English listening trainer**.
+Keywords: **Learn English from YouTube**, **English listening practice**, **English dictation app**, **translated subtitles**, **Language learning tool**, **YouTube language learning**, **English writing practice**, **English listening trainer**.
 
 ## Project Overview
 
 ### English
 
-ListenWrite English lets learners paste a YouTube video URL, upload an Arabic `.srt` or `.vtt` subtitle file, and practice one subtitle segment at a time. The app plays only the selected timestamp range, shows the Arabic meaning, and asks the learner to write the English sentence they hear.
+ListenWrite English lets learners paste a YouTube video URL, upload a translated `.srt` or `.vtt` subtitle file, and practice one subtitle segment at a time. The app plays only the selected timestamp range, shows the translated meaning, and asks the learner to write the sentence they hear.
 
-The project solves a common learning problem: subtitle editors and video players are not designed for repeated listening and dictation practice on mobile. ListenWrite English makes replaying, slowing down, navigating, marking difficult segments, and saving progress simple.
+The project solves a common language learning problem: video platforms are excellent for exposure, but watching is often passive. ListenWrite English makes YouTube practice active by combining dictation, replay, slow playback, translated subtitle support, segment navigation, difficult markers, and progress tracking.
 
 ### العربية
 
-**ListenWrite English** هو تطبيق ويب يساعد متعلمي اللغة الإنجليزية الناطقين بالعربية على التدريب من مقاطع YouTube. يقوم المستخدم بإضافة رابط فيديو ورفع ملف ترجمة عربية فقط، ثم يقسم التطبيق الفيديو إلى مقاطع قصيرة حسب توقيت الترجمة.
+**ListenWrite English** هو تطبيق ويب يساعد متعلمي اللغات على تحويل مقاطع YouTube إلى تدريب عملي على الاستماع والكتابة. يقوم المستخدم بإضافة رابط فيديو ورفع ملف ترجمة مترجم، ثم يقسم التطبيق الفيديو إلى مقاطع قصيرة حسب توقيت الترجمة.
 
-يعرض التطبيق معنى الجملة بالعربية، ويشغل الجزء المناسب من الفيديو، ثم يكتب المستخدم الجملة الإنجليزية التي يسمعها. الهدف هو تحسين الاستماع، الكتابة، التذكر النشط، وفهم الجمل الإنجليزية الطبيعية بطريقة سهلة على الجوال.
+يعرض التطبيق معنى الجملة المترجم، ويشغل الجزء المناسب من الفيديو، ثم يكتب المستخدم الجملة التي يسمعها في اللغة التي يتعلمها. الهدف هو تحويل المشاهدة السلبية إلى تدريب نشط يساعد على تحسين الاستماع، الكتابة، التذكر، وفهم الكلام الطبيعي بطريقة سهلة على الجوال.
 
 ## Screenshots
 
@@ -28,11 +28,11 @@ Preview the mobile-first learning flow: create a practice, study one subtitle se
 
 | New Practice | Practice | Segment List |
 | --- | --- | --- |
-| ![Create a new ListenWrite English practice from a YouTube URL and Arabic subtitle file](docs/screenshots/new-practice.png) | ![English listening practice screen with YouTube segment replay, Arabic subtitles, and writing box](docs/screenshots/practice.png) | ![Synced Arabic subtitle segment list with timestamps and active segment highlight](docs/screenshots/segments.png) |
+| ![Create a new ListenWrite English practice from a YouTube URL and translated subtitle file](docs/screenshots/new-practice.png) | ![Listening practice screen with YouTube segment replay, translated subtitles, and writing box](docs/screenshots/practice.png) | ![Synced translated subtitle segment list with timestamps and active segment highlight](docs/screenshots/segments.png) |
 
 ## Features
 
-- Create a practice from a YouTube URL and Arabic subtitle file.
+- Create a practice from a YouTube URL and translated subtitle file.
 - Supports `.srt` and `.vtt` subtitle formats.
 - Parses subtitle timestamps into practice segments.
 - Plays only the active subtitle segment.
@@ -40,7 +40,7 @@ Preview the mobile-first learning flow: create a practice, study one subtitle se
 - Slow playback at `0.75x`.
 - Optional YouTube caption toggle when captions are available.
 - Active subtitle sync when seeking through the video timeline.
-- Large mobile-friendly writing box for English dictation.
+- Large mobile-friendly writing box for dictation.
 - Previous, Next, and Mark as Difficult controls stay accessible on mobile.
 - Segment list with timestamps, completion color, difficult markers, and auto-scroll to the active segment.
 - Saves practices, answers, replay counts, progress, and difficult markers in Supabase.
@@ -130,11 +130,11 @@ NEXT_PUBLIC_SUPABASE_ANON_KEY=
 1. Open the app.
 2. Click **New Practice**.
 3. Paste a YouTube URL.
-4. Upload an Arabic `.srt` or `.vtt` subtitle file.
+4. Upload a translated `.srt` or `.vtt` subtitle file.
 5. Create the practice.
 6. Start listening to one subtitle segment at a time.
-7. Read the Arabic meaning.
-8. Write the English sentence you hear.
+7. Read the translated meaning.
+8. Write the sentence you hear.
 9. Use **Replay** to repeat the same segment.
 10. Use **0.75x** to slow down playback.
 11. Use **Previous** and **Next** to move between segments.
