@@ -22,11 +22,11 @@ The project solves a common learning problem: subtitle editors and video players
 
 ## Screenshots
 
-Screenshots can be added after publishing the first public release.
+Preview the mobile-first learning flow: create a practice, study one subtitle segment, and jump through the synced segment list.
 
-| Home | New Practice | Practice |
+| New Practice | Practice | Segment List |
 | --- | --- | --- |
-| `docs/screenshots/home.png` | `docs/screenshots/new-practice.png` | `docs/screenshots/practice.png` |
+| ![Create a new ListenWrite English practice from a YouTube URL and Arabic subtitle file](docs/screenshots/new-practice.png) | ![English listening practice screen with YouTube segment replay, Arabic subtitles, and writing box](docs/screenshots/practice.png) | ![Synced Arabic subtitle segment list with timestamps and active segment highlight](docs/screenshots/segments.png) |
 
 ## Features
 
