@@ -1,8 +1,10 @@
 # ListenWrite English
 
-**ListenWrite English** is a mobile-first English listening practice and English dictation app that turns YouTube videos with Arabic subtitles into sentence-by-sentence writing practice.
+**Learn English listening and writing from YouTube in an easy, focused way.**
 
-It helps Arabic-speaking learners improve English listening, writing, vocabulary, sentence structure, and active recall by combining YouTube audio, Arabic subtitle meaning, replay controls, and a focused writing box.
+**ListenWrite English** is a mobile-first English listening trainer and dictation app for Arabic speakers. Paste a YouTube link, upload Arabic subtitles, then practice sentence by sentence: listen to the English audio, read the Arabic meaning, and write what you hear.
+
+It is built for learners who want a simple language learning tool for daily English listening practice, English writing practice, vocabulary building, sentence structure, and active recall without using complicated subtitle editors.
 
 Keywords: **Learn English from YouTube**, **English listening practice**, **English dictation app**, **Arabic subtitles**, **Language learning tool**, **YouTube language learning**, **English writing practice**, **English listening trainer**.
 
